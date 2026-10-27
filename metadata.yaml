@@ -1,0 +1,15 @@
+name: astrbot_plugin_ai_tts
+display_name: AI 语音
+author: 大肥鱼
+version: 2.0.0
+desc: 通用 AI 语音插件：一条回复一条语音，支持 Fish Audio / 小米 MiMo / 任意 OpenAI 兼容 TTS；含 18 类情绪、音色热切换、尾音修复、表情配图与会话控制。
+entry: main.py
+license: MIT
+repo: https://github.com/your-name/astrbot_plugin_ai_tts
+tags:
+  - tts
+  - voice
+  - fishaudio
+  - mimo
+  - openai
+  - qq

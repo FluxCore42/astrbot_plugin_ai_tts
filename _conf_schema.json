@@ -1,0 +1,428 @@
+{
+  "api": {
+    "type": "object",
+    "description": "① 语音引擎（Fish / MiMo）",
+    "items": {
+      "base_url": {
+        "type": "string",
+        "description": "API 地址",
+        "default": "https://api.fish.audio/v1",
+        "hint": "官方地址是 https://api.fish.audio/v1。注意：不要填 api.fish-audio.cn，该域名不存在（AstrBot 内置 provider 的默认值就是它，所以内置方案会连不上）。"
+      },
+      "api_key": {
+        "type": "string",
+        "description": "Fish Audio API Key",
+        "default": "",
+        "hint": "形如 sk-fish-xxxx，在 fish.audio 控制台获取。"
+      },
+      "model": {
+        "type": "string",
+        "description": "模型",
+        "default": "s2.1-pro-free",
+        "hint": "免费档用 s2.1-pro-free；付费可填 s2-pro / s1 等。模型以 HTTP header 发送。"
+      },
+      "reference_id": {
+        "type": "string",
+        "description": "音色（reference_id）",
+        "default": "",
+        "hint": "32 位十六进制，取自 fish.audio 音色页 /m/<reference_id>/。留空则用账号默认音色。"
+      },
+      "proxy": {
+        "type": "string",
+        "description": "HTTP 代理",
+        "default": "",
+        "hint": "国内直连 api.fish.audio 会失败（DNS 污染 + 连接超时），必须填代理，例如 http://127.0.0.1:7892。留空表示直连。"
+      },
+      "timeout": {
+        "type": "int",
+        "description": "请求超时（秒）",
+        "default": 60
+      },
+      "max_retries": {
+        "type": "int",
+        "description": "失败重试次数",
+        "default": 2,
+        "hint": "仅对 429/5xx/网络错误重试，指数退避。"
+      },
+      "format": {
+        "type": "string",
+        "description": "音频格式",
+        "options": [
+          "mp3",
+          "wav",
+          "opus"
+        ],
+        "default": "mp3",
+        "hint": "一般用 mp3。qq_official / wecom 这类需要腾讯 SILK 的平台会自动改请求 WAV（见下方开关），避免依赖 ffmpeg。"
+      },
+      "latency": {
+        "type": "string",
+        "description": "合成延迟模式",
+        "options": [
+          "balanced",
+          "normal"
+        ],
+        "default": "balanced",
+        "hint": "balanced 会压低首字节延迟、抖动更小；normal 更稳定但更慢。"
+      },
+      "reference_files": {
+        "type": "list",
+        "description": "参考音色文件（相对插件数据目录）",
+        "default": [],
+        "hint": "零样本克隆：每个文件就是一个音色，用 /鱼音色 序号 切换。留空则用上面的 reference_id。"
+      },
+      "reference_index": {
+        "type": "int",
+        "description": "默认音色序号",
+        "default": 0,
+        "hint": "从 0 开始。0=第一个文件，1=第二个文件。会话里用 /鱼音色 切换会覆盖它。"
+      },
+      "provider": {
+        "type": "string",
+        "description": "当前后端",
+        "options": [
+          "fish",
+          "mimo",
+          "custom"
+        ],
+        "default": "fish",
+        "hint": "fish = Fish Audio（音色用 reference_id）；mimo = 小米 MiMo；custom = 通用 OpenAI 兼容接口（去②填地址和 Key）。"
+      },
+      "mimo_base_url": {
+        "type": "string",
+        "description": "MiMo 接口地址",
+        "default": "https://api.xiaomimimo.com/v1"
+      },
+      "mimo_key": {
+        "type": "string",
+        "description": "MiMo API Key",
+        "default": "",
+        "hint": "MiMo 用 api-key 请求头，不需要 Bearer。"
+      },
+      "mimo_model": {
+        "type": "string",
+        "description": "MiMo 模型",
+        "default": "mimo-v2.5-tts"
+      },
+      "mimo_voice": {
+        "type": "string",
+        "description": "MiMo 音色",
+        "default": "冰糖",
+        "hint": "常用：冰糖、茉莉、苏打、白桦、Mia、Chloe、Milo、Dean。"
+      }
+    }
+  },
+  "custom": {
+    "type": "object",
+    "description": "② 通用引擎（任意 OpenAI 兼容接口）",
+    "items": {
+      "custom_base_url": {
+        "type": "string",
+        "description": "接口地址",
+        "default": "",
+        "hint": "填到 /v1 为止，例如 https://api.openai.com/v1、https://api.siliconflow.cn/v1。插件会自动请求 {地址}/audio/speech。"
+      },
+      "custom_api_key": {
+        "type": "string",
+        "description": "API Key",
+        "default": ""
+      },
+      "custom_model": {
+        "type": "string",
+        "description": "模型名",
+        "default": "tts-1",
+        "hint": "例如 tts-1、gpt-4o-mini-tts、FunAudioLLM/CosyVoice2-0.5B。"
+      },
+      "custom_voice": {
+        "type": "string",
+        "description": "音色",
+        "default": "",
+        "hint": "服务商的音色名，例如 alloy、zh-CN-XiaoxiaoNeural、anna。留空则不传该字段。"
+      },
+      "custom_auth_header": {
+        "type": "string",
+        "description": "鉴权方式",
+        "options": [
+          "bearer",
+          "api-key",
+          "x-api-key"
+        ],
+        "default": "bearer",
+        "hint": "bearer = Authorization: Bearer xxx；另两种分别用 api-key / x-api-key 头。"
+      },
+      "custom_json_field": {
+        "type": "string",
+        "description": "JSON 音频字段",
+        "default": "",
+        "hint": "若接口返回的是 JSON（音频 base64），填字段路径，例如 data.audio 或 audio。返回原始音频流则留空。"
+      },
+      "custom_extra_json": {
+        "type": "string",
+        "description": "附加请求体",
+        "default": "",
+        "hint": "JSON 对象字符串，会合并进请求体，例如 {\"speed\": 0.95, \"emotion\": \"happy\"}。"
+      }
+    }
+  },
+  "output": {
+    "type": "object",
+    "description": "③ 发语音策略",
+    "items": {
+      "auto_speak": {
+        "type": "bool",
+        "description": "自动把 LLM 回复转成语音",
+        "default": true
+      },
+      "send_text": {
+        "type": "bool",
+        "description": "语音回复附带文字",
+        "default": false,
+        "hint": "默认关闭：一条回复只发语音，不再额外发一条同样的文字。"
+      },
+      "platforms": {
+        "type": "list",
+        "description": "生效平台",
+        "items": {
+          "type": "string"
+        },
+        "default": [
+          "aiocqhttp",
+          "qq_official",
+          "qq_official_webhook"
+        ],
+        "hint": "aiocqhttp 即 QQ（NapCat / Lagrange 等 OneBot 实现）。留空表示所有平台。"
+      },
+      "probability": {
+        "type": "float",
+        "description": "触发概率",
+        "default": 0.5,
+        "hint": "0.5 = 一半语音一半文字，更像真人。1.0 = 每条都语音。"
+      },
+      "min_chars": {
+        "type": "int",
+        "description": "最短字数",
+        "default": 4,
+        "hint": "清洗后短于该字数就不发语音（避免“嗯”“好”也合成）。"
+      },
+      "max_chars": {
+        "type": "int",
+        "description": "单段最大字数",
+        "default": 40,
+        "hint": "语音单段字数上限。Fish 免费档约 3 字/秒，40 字≈10 秒；越长越慢。"
+      },
+      "max_segments": {
+        "type": "int",
+        "description": "最多语音段数",
+        "default": 1,
+        "hint": "默认 1 条语音。超过 max_chars×max_segments 的回复直接发文字，避免内容被截断。"
+      },
+      "cooldown_seconds": {
+        "type": "int",
+        "description": "同会话冷却（秒）",
+        "default": 2
+      },
+      "max_concurrency": {
+        "type": "int",
+        "description": "最大并发合成数",
+        "default": 2
+      },
+      "skip_if_record_exists": {
+        "type": "bool",
+        "description": "已有语音段时跳过",
+        "default": true,
+        "hint": "开着可以避免和「TTS 情绪路由」等插件重复发两条语音。"
+      },
+      "qq_official_wav": {
+        "type": "bool",
+        "description": "QQ 官方机器人请求 WAV",
+        "default": true,
+        "hint": "qq_official 的语音要转成腾讯 SILK：mp3 转 wav 依赖 ffmpeg，直接请求 wav 则只用纯 Python 的 pysilk。本机没装 ffmpeg，务必保持开启。"
+      },
+      "tail_padding_ms": {
+        "type": "int",
+        "description": "结尾静音（毫秒）",
+        "default": 250,
+        "hint": "在语音末尾补一段静音，避免最后一句被切断。200~400 比较自然；0 表示不补。"
+      },
+      "speed": {
+        "type": "float",
+        "description": "整体语速",
+        "default": 0.93,
+        "hint": "1.0 是模型原速；0.93 略慢一点更自然，0.85 更慢。这是固定倍数，不会让音色漂移。"
+      }
+    }
+  },
+  "emotion": {
+    "type": "object",
+    "description": "④ 情绪与语气",
+    "items": {
+      "enabled": {
+        "type": "bool",
+        "description": "启用情绪标签",
+        "default": true,
+        "hint": "识别正文里的 [excited]、[laughing] 等标签：传给 Fish Audio，同时从 QQ 可见文字里去掉。"
+      },
+      "default_tag": {
+        "type": "string",
+        "description": "默认情绪标签",
+        "default": "",
+        "hint": "填 excited 或 [excited]，会在没有标签的回复前自动加上；留空表示不加。"
+      },
+      "extra_tags": {
+        "type": "list",
+        "description": "追加标签白名单",
+        "items": {
+          "type": "string"
+        },
+        "default": [],
+        "hint": "插件已内置约 100 个中英文标签；需要自定义（例如 [东北话]）时加在这里，否则方括号内容会原样保留。"
+      },
+      "auto_detect": {
+        "type": "bool",
+        "description": "自动识别情绪",
+        "default": true,
+        "hint": "按回复内容识别 18 类情绪（开心/难过/生气/委屈…），换算成 Fish 的语速与音量。"
+      },
+      "prosody": {
+        "type": "bool",
+        "description": "启用韵律变化",
+        "default": true,
+        "hint": "关闭后不传语速/音量，声音恢复平铺直叙。"
+      },
+      "strength": {
+        "type": "float",
+        "description": "情绪强度",
+        "default": 0.6,
+        "hint": "0=无起伏，1=完整幅度。建议 0.6~0.9，太大听起来夸张。"
+      },
+      "tag_prefix": {
+        "type": "bool",
+        "description": "附加情绪标签",
+        "default": false,
+        "hint": "在文本前加 [开心] 之类标签。不同模型反应不同，可能被念出来，默认关闭。"
+      },
+      "fish_emotion": {
+        "type": "bool",
+        "description": "使用 Fish 情绪字段",
+        "default": true,
+        "hint": "把识别出的情绪映射成 Fish 的 emotion（happy/sad/angry/fear/surprise），实测能明显改变音色与能量，是最有效的情绪手段。"
+      },
+      "text_style": {
+        "type": "bool",
+        "description": "按情绪调整朗读标点",
+        "default": true,
+        "hint": "只改朗读用的标点（感叹号/省略号/波浪号），不改显示文字。实测能把音高波动放大约一倍，是最能拉出情绪的一项。"
+      },
+      "mimo_emotion": {
+        "type": "bool",
+        "description": "MiMo 情绪标签",
+        "default": true,
+        "hint": "打开后会把识别出的情绪以（开心）形式加在 MiMo 文本前。"
+      }
+    }
+  },
+  "reply_style": {
+    "type": "object",
+    "description": "⑤ 回复清理",
+    "items": {
+      "enabled": {
+        "type": "bool",
+        "description": "启用回复清理",
+        "default": true,
+        "hint": "删除动作描写（*摇头*、（歪头））、Markdown 标记，并把过长回复按句截断。"
+      },
+      "max_chars": {
+        "type": "int",
+        "description": "回复字数上限",
+        "default": 80,
+        "hint": "超过后按最后一个句号/问号/感叹号截断；0 表示不限制。"
+      },
+      "strip_actions": {
+        "type": "bool",
+        "description": "删除动作与旁白",
+        "default": true
+      }
+    }
+  },
+  "meme": {
+    "type": "object",
+    "description": "⑥ 表情配图（可选）",
+    "items": {
+      "enabled": {
+        "type": "bool",
+        "description": "自动附带表情包",
+        "default": true,
+        "hint": "按回复关键词选分类，不依赖模型输出标记；meme_manager 已经配图时会自动跳过。"
+      },
+      "probability": {
+        "type": "int",
+        "description": "随机附带概率（%）",
+        "default": 20,
+        "hint": "用户消息里出现“表情/斗图/配图”时会强制附带，忽略这个概率。"
+      },
+      "max_size_mb": {
+        "type": "float",
+        "description": "图片体积上限（MB）",
+        "default": 4.0,
+        "hint": "QQ 官方图片通道对体积敏感，超过上限的图会被优先跳过。"
+      },
+      "skip_when_voice": {
+        "type": "bool",
+        "description": "语音回复不配图",
+        "default": true,
+        "hint": "开着可以避免 QQ 把「图片」和「语音」拆成两条消息。"
+      }
+    }
+  },
+  "cache": {
+    "type": "object",
+    "description": "⑦ 缓存与性能",
+    "items": {
+      "enabled": {
+        "type": "bool",
+        "description": "启用磁盘缓存",
+        "default": true,
+        "hint": "相同文本 + 音色 + 模型只合成一次，重复回复直接复用。"
+      },
+      "max_files": {
+        "type": "int",
+        "description": "缓存文件上限",
+        "default": 300
+      },
+      "ttl_days": {
+        "type": "int",
+        "description": "缓存保留天数",
+        "default": 7
+      }
+    }
+  },
+  "session": {
+    "type": "object",
+    "description": "⑧ 会话控制",
+    "items": {
+      "default_enabled": {
+        "type": "bool",
+        "description": "新会话默认开启",
+        "default": true
+      },
+      "whitelist": {
+        "type": "list",
+        "description": "白名单 UMO",
+        "items": {
+          "type": "string"
+        },
+        "default": [],
+        "hint": "填 UMO 前缀，例如 aiocqhttp:GroupMessage:123456。非空时只有这些会话发语音。"
+      },
+      "blacklist": {
+        "type": "list",
+        "description": "黑名单 UMO",
+        "items": {
+          "type": "string"
+        },
+        "default": [],
+        "hint": "优先级高于白名单。"
+      }
+    }
+  }
+}
