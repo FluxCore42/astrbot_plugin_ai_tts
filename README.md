@@ -21,6 +21,13 @@
 
 ## 安装
 
+`ash
+cd AstrBot/data/plugins
+git clone https://github.com/FluxCore42/astrbot_plugin_ai_tts.git
+`
+
+或手动下载后：
+
 1. 把整个目录放进 `AstrBot/data/plugins/astrbot_plugin_ai_tts/`
 2. 重启 AstrBot，或在面板里重载插件
 3. 面板 → 插件 → **AI 语音** → 填配置
