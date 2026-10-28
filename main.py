@@ -113,6 +113,8 @@ DEFAULT_EMOTION = {
     "fish_emotion": True,
     "strength": 0.6,
     "tag_prefix": False,
+    "text_style": True,
+    "mimo_emotion": True,
 }
 
 DEFAULT_CACHE = {
